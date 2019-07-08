@@ -8,115 +8,120 @@ import { Matrix4 } from './lib/cuon-matrix'
 import { RenderObject } from './util'
 import { VSHADER_SOURCE, FSHADER_SOURCE } from './shader/simpleShader'
 import { cubeData } from './object/cube'
+import { GLObject } from './object/object'
+import { GLProgram } from './shader/program'
+import { GLScene } from './scene/scene'
+import { parsedData } from './loader/objLoader'
+import TextureSrc from './loader/sample/texture/sample.png'
+import { InitEnv } from './util/init'
 
-let x_length = 50
-let y_length = 50
+let scene
 
-// let colorsData = createColorData(x_length, y_length)
+InitEnv('webgl', [TextureSrc], main)
 
-let theta = 2
-let cameraPosition = { x: 0, y: 3, z: 13 }
-let objectPosition = { x: 0, z: 0 }
-let gl
-let program
-let vertexNumber
-
-function main() {
-  let canvas = document.getElementById('webgl')
+function main(canvasId) {
+  let canvas = document.getElementById(canvasId)
   if (!canvas) {
     console.log('Failed to retrieve the <canvas> element')
   }
-
-  gl = getWebGLContext(canvas)
-  if (!gl) {
-    console.log('Failed to get the rendering context for WebGL')
-  }
-
-  //   readShaderFile(gl, 'shader/f_shader.glsl', gl.FRAGMENT_SHADER)
-  //   readShaderFile(gl, 'shader/v_shader.glsl', gl.VERTEX_SHADER)
+  scene = new GLScene(canvas)
   start()
-
-  document.addEventListener('keydown', keyPress)
 }
 
-main()
-
-function keyPress(key) {
-  console.log(key)
-
-  switch (event.key) {
-    case 'ArrowLeft':
-      // Left pressed
-      theta -= 0.1
-      break
-    case 'ArrowRight':
-      // Right pressed
-      theta += 0.1
-      break
-    case 'ArrowUp':
-      // Up pressed
-      break
-    case 'ArrowDown':
-      // Down pressed
-      break
-  }
-
-  drawElement()
-}
+let theta = 2
+let phi = 1.5
+let rho = 20
 
 function start() {
-  program = createProgram(gl, VSHADER_SOURCE, FSHADER_SOURCE)
-  useProgram(gl, program)
-  gl.enable(gl.DEPTH_TEST)
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+  let program = createProgram(scene.gl, VSHADER_SOURCE, FSHADER_SOURCE)
+  let glprogram = new GLProgram(program)
+  scene.setProgram('simple', glprogram)
+  scene.useProgram('simple')
+  scene.defaultSetting()
 
-  let MMatrix = new Matrix4()
-  MMatrix.setTranslate(-0.5, -0.5, -0.5)
-
-  let floor = new RenderObject(
-    program,
-    {
-      a_Position: cubeData.positions,
-      a_Normal: cubeData.normals
-    },
-    MMatrix
+  let floor = new GLObject()
+  floor.setAll(
+    scene.gl,
+    parsedData.positions,
+    parsedData.normals,
+    parsedData.textureCord,
+    TextureSrc
   )
+  // floor.setModelPosition(-0.5, -2, -0.5)
+  scene.addObject('floor', floor)
 
-  floor.bindBuffer('a_Position', 3, 3, 0, gl)
-  floor.bindBuffer('a_Normal', 3, 3, 0, gl)
+  scene.setLightPos(-10, 11, -10)
+  scene.setLightColor(1.0, 1.0, 1.0)
+  let cameraPosition = {
+    x: Math.sin(theta) * 20,
+    y: 20,
+    z: Math.cos(theta) * 20
+  }
+  let targetPosition = {
+    x: 0,
+    y: 0,
+    z: 0
+  }
 
-  vertexNumber = cubeData.positions.length / 3
+  scene.setPerspectiveCamera(cameraPosition, targetPosition)
+  // scene.setViewPos()
 
-  let lightDirection = new Float32Array([-2.5, -1.5, -0.5])
+  scene.clear()
+  scene.draw()
 
-  let c_time = Date.now()
-  floor.setUniform1f('u_time', c_time, gl)
-  floor.setUniform3f('u_lightDirection', lightDirection, gl)
-  floor.setUniformMatrix4fv('u_mMatrix', floor.MMatrix.elements, gl)
-
-  drawElement()
+  window.requestAnimationFrame(draw)
 }
 
-function drawElement() {
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-  var vpMatrix = createVP()
-  //   mvpMatrix.translate(objectPosition.x, 0, objectPosition.z)
+function draw(timestamp) {
+  let cameraPosition = {
+    x: Math.sin(phi) * Math.cos(theta) * rho,
+    y: rho * Math.cos(phi),
+    z: Math.sin(phi) * Math.sin(theta) * rho
+  }
+  scene.setPerspectiveCamera(cameraPosition, scene.targetPosition)
 
-  setVpMatrix(vpMatrix.elements)
-  //   object.setUniformMatrix4fv('u_vpMatrix', mvpMatrix.elements)
-
-  gl.drawArrays(gl.TRIANGLES, 0, vertexNumber)
+  scene.clear()
+  scene.draw()
+  window.requestAnimationFrame(draw)
 }
 
-function setVpMatrix(val) {
-  var u_val = gl.getUniformLocation(program, 'u_vpMatrix')
-  gl.uniformMatrix4fv(u_val, false, val)
+document.addEventListener('mousedown', mousedown)
+document.addEventListener('mouseup', mouseup)
+document.addEventListener('mousemove', mousemove)
+window.addEventListener('wheel', event => {
+  let diff = event.deltaY
+  rho += diff * 0.1
+})
+
+let mouseflag = false
+let mousePos
+
+function mousedown(mouse) {
+  mouseflag = true
+  mousePos = { x: mouse.clientX, y: mouse.clientY }
 }
 
-function createVP() {
-  var vpMatrix = new Matrix4()
+function mouseup() {
+  mouseflag = false
+}
 
-  vpMatrix.setPerspective(30, 1, 1, 100)
-  vpMatrix.lookAt(4 * Math.sin(theta), 2, 4 * Math.cos(theta), 0, 0, 0, 0, 1, 0)
-  return vpMatrix
+function mousemove(mouse) {
+  if (mouseflag) {
+    let curPos = { x: mouse.clientX, y: mouse.clientY }
+    let diffX = curPos.x - mousePos.x
+    let diffY = curPos.y - mousePos.y
+    theta += diffX * 0.01
+
+    phi += diffY * 0.01
+
+    if (phi < 0.1) {
+      phi = 0.1
+    }
+
+    if (phi > Math.PI / 2) {
+      phi = Math.PI / 2
+    }
+
+    mousePos = curPos
+  }
 }

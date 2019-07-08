@@ -4,13 +4,14 @@ class GLObject {
   constructor() {
     this.position = undefined
     this.normal = undefined
-    this.color = undefined
+    this.textureCord = undefined
     this.positionBuffer = undefined
     this.normalBuffer = undefined
-    this.colorBuffer = undefined
+    this.textureCordBuffer = undefined
     this.ModelPosition = { x: 0, y: 0, z: 0 }
     this.ModelRotation = { x: 0, y: 0, z: 0 }
     this.ModelMatrix = new Matrix4()
+    this.diffuseTexture = undefined
   }
 
   setPosition(gl, position) {
@@ -31,16 +32,36 @@ class GLObject {
     gl.bufferData(gl.ARRAY_BUFFER, this.normal, gl.STATIC_DRAW)
     gl.bindBuffer(gl.ARRAY_BUFFER, null)
   }
-  setColor(gl, color) {
-    this.color = color
-    if (this.color != undefined) {
-      if (this.colorBuffer == undefined) {
-        this.colorBuffer = gl.createBuffer()
+  setTextureCord(gl, textureCord) {
+    this.textureCord = textureCord
+    if (this.textureCord != undefined) {
+      if (this.textureCordBuffer == undefined) {
+        this.textureCordBuffer = gl.createBuffer()
       }
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer)
-      gl.bufferData(gl.ARRAY_BUFFER, this.color, gl.STATIC_DRAW)
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.textureCordBuffer)
+      gl.bufferData(gl.ARRAY_BUFFER, this.textureCord, gl.STATIC_DRAW)
       gl.bindBuffer(gl.ARRAY_BUFFER, null)
     }
+  }
+
+  setTexture(gl, textureName) {
+    let img = window.images[textureName]
+    let texture = gl.createTexture()
+    this.diffuseTexture = texture
+
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+
+    // Set the parameters so we can render any size image.
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+
+    // https://gamedev.stackexchange.com/a/140791
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
+
+    // Upload the image into the texture.
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img)
   }
 
   setModelPosition(x, y, z) {
@@ -65,10 +86,11 @@ class GLObject {
 
   setModelMatrix(gl) {}
 
-  setAll(gl, position, normal, color) {
+  setAll(gl, position, normal, textureCord, texture) {
     this.setPosition(gl, position)
     this.setNormal(gl, normal)
-    this.setColor(gl, color)
+    this.setTextureCord(gl, textureCord)
+    this.setTexture(gl, texture)
   }
 }
 

@@ -15,6 +15,7 @@ class GLScene {
     this.activeProgram = undefined
     this.objects = {}
     this.cameraPosition = undefined
+    this.targetPosition = undefined
   }
 
   setProgram(name, program) {
@@ -69,12 +70,7 @@ class GLScene {
   draw() {
     for (let objectName in this.objects) {
       let dataLength = this.objects[objectName].position.length / 3
-      this.activeProgram.setUniformMatrix4fv(
-        this.gl,
-        'u_mMatrix',
-        this.objects[objectName].ModelMatrix.elements
-      )
-
+      this.bindUniform(objectName)
       this.bindAttribute(objectName)
 
       this.gl.drawArrays(this.gl.TRIANGLES, 0, dataLength)
@@ -84,6 +80,7 @@ class GLScene {
   setPerspectiveCamera(cameraPosition, targetPosition) {
     var vpMatrix = new Matrix4()
     this.cameraPosition = cameraPosition
+    this.targetPosition = targetPosition
     vpMatrix.setPerspective(30, 1, 1, 100)
     vpMatrix.lookAt(
       cameraPosition.x,
@@ -100,6 +97,27 @@ class GLScene {
       this.gl,
       'u_vpMatrix',
       vpMatrix.elements
+    )
+
+    this.setViewPos()
+  }
+
+  bindUniform(objectName) {
+    this.activeProgram.setUniformMatrix4fv(
+      this.gl,
+      'u_mMatrix',
+      this.objects[objectName].ModelMatrix.elements
+    )
+
+    let diffTextureLocation = this.gl.getUniformLocation(
+      this.activeProgram.program,
+      'u_texture'
+    )
+    this.gl.uniform1i(diffTextureLocation, 0)
+    this.gl.activeTexture(this.gl.TEXTURE0)
+    this.gl.bindTexture(
+      this.gl.TEXTURE_2D,
+      this.objects[objectName].diffuseTexture
     )
   }
 
@@ -118,9 +136,9 @@ class GLScene {
     )
     this.activeProgram.setAttribute(
       this.gl,
-      this.objects[name].colorBuffer,
-      3,
-      'a_Color'
+      this.objects[name].textureCordBuffer,
+      2,
+      'a_Texcoord'
     )
   }
 }
