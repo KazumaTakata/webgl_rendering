@@ -13,7 +13,7 @@ uniform vec3 u_viewPos;
 void main(){
     vec4 objectColor = texture2D(u_texture, v_TexCoord);
 
-    float ambientStrength = 0.1;
+    float ambientStrength = 0.3;
     float specularStrength = 0.5;
 
     vec3 ambient = ambientStrength * u_lightColor;

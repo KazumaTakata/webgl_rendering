@@ -18,6 +18,7 @@ class GLScene {
     this.targetPosition = undefined
     this.targetTexture = {}
     this.fb = this.gl.createFramebuffer()
+    this.vpMatrix = undefined
   }
 
   setProgram(name, program) {
@@ -109,6 +110,8 @@ class GLScene {
       1,
       0
     )
+
+    this.vpMatrix = vpMatrix
     this.activeProgram.setUniformMatrix4fv(
       this.gl,
       'u_vpMatrix',

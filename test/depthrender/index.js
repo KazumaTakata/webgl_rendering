@@ -6,12 +6,10 @@ import {
 } from 'lib/cuon-utils'
 import { Matrix4 } from 'lib/cuon-matrix'
 import { RenderObject } from 'util'
-import VSHADER_SOURCE from 'glsl/phong/v_phong_shader.glsl'
-import FSHADER_SOURCE from 'glsl/phong/f_phong_shader.glsl'
-
-import VSSHADER_SOURCE from 'glsl/phong_shadow/v_shader.glsl'
-import FSSHADER_SOURCE from 'glsl/phong_shadow/f_shader.glsl'
-
+import VSHADER_SOURCE from 'glsl/v_phong_shader.glsl'
+import FSHADER_SOURCE from 'glsl/f_phong_shader.glsl'
+import VIMAGE_SHADER_SOURCE from 'glsl/depth/v_shader.glsl'
+import FIMAGE_SHADER_SOURCE from 'glsl/depth/f_shader.glsl'
 import { verticesTexCoords } from 'object/image'
 import { cubeData } from 'object/cube'
 import { GLObject } from 'object/object'
@@ -38,9 +36,9 @@ function main(canvasId) {
   start()
 }
 
-let theta = 6.4
+let theta = 2.4
 let phi = 0.5
-let rho = 14
+let rho = 8
 
 function start() {
   let program = createProgram(scene.gl, VSHADER_SOURCE, FSHADER_SOURCE)
@@ -48,23 +46,6 @@ function start() {
   scene.setProgram('simple', glprogram)
   scene.useProgram('simple')
   scene.defaultSetting()
-
-  let lightPosition = {
-    x: -10,
-    y: 11,
-    z: -10
-  }
-
-  let cameraPosition = {
-    x: Math.sin(phi) * Math.cos(theta) * rho,
-    y: rho * Math.cos(phi),
-    z: Math.sin(phi) * Math.sin(theta) * rho
-  }
-  let targetPosition = {
-    x: 0,
-    y: 0,
-    z: 0
-  }
 
   let floor = new GLObject()
   floor.setAll(
@@ -78,8 +59,18 @@ function start() {
   // floor.setModelPosition(-0.5, -2, -0.5)
   scene.addObject('floor', floor)
 
-  scene.setLightPos(lightPosition.x, lightPosition.y, lightPosition.z)
+  scene.setLightPos(-10, 11, -10)
   scene.setLightColor(1.0, 1.0, 1.0)
+  let cameraPosition = {
+    x: Math.sin(phi) * Math.cos(theta) * rho,
+    y: rho * Math.cos(phi),
+    z: Math.sin(phi) * Math.sin(theta) * rho
+  }
+  let targetPosition = {
+    x: 0,
+    y: 0,
+    z: 0
+  }
 
   let canvasWidth = scene.canvas.clientWidth
   let canvasHeight = scene.canvas.clientHeight
@@ -88,36 +79,41 @@ function start() {
 
   scene.bindFrambufferAndSetViewport(canvasWidth, canvasHeight)
   scene.attachTargetTextureToFrameBuffer('targetTex', 'depth')
+  // scene.addDepthRenderBuffer(canvasWidth, canvasHeight)
 
   let aspect = canvasWidth / canvasHeight
-  scene.setPerspectiveCamera(lightPosition, targetPosition, aspect)
+  scene.setPerspectiveCamera(cameraPosition, targetPosition, aspect)
   scene.clear()
   scene.draw()
 
   scene.unbindFrambufferAndSetViewport(canvasWidth, canvasHeight)
-  let fromlightVPMatrix = scene.vpMatrix
 
-  let program2 = createProgram(scene.gl, VSSHADER_SOURCE, FSSHADER_SOURCE)
+  let program2 = createProgram(
+    scene.gl,
+    VIMAGE_SHADER_SOURCE,
+    FIMAGE_SHADER_SOURCE
+  )
   let glprogram2 = new GLProgram(program2)
 
-  scene.setProgram('shadow', glprogram2)
-  scene.useProgram('shadow')
-  scene.defaultSetting()
-  scene.setLightPos(lightPosition.x, lightPosition.y, lightPosition.z)
-  scene.setLightColor(1.0, 1.0, 1.0)
-  floor.setTextureObject('u_depthTexture', scene.targetTexture['targetTex'])
+  scene.setProgram('image', glprogram2)
+  scene.useProgram('image')
 
-  scene.addObject('floor', floor)
-  scene.activeProgram.setUniformMatrix4fv(
+  let image = new GLObject()
+  image.setAll(
     scene.gl,
-    'lightVPMatrix',
-    fromlightVPMatrix.elements
+    verticesTexCoords.positions,
+    verticesTexCoords.normals,
+    verticesTexCoords.textureCord,
+    { posSize: 2, texSize: 2 },
+    {}
   )
 
-  scene.setPerspectiveCamera(cameraPosition, targetPosition, aspect)
+  image.setTextureObject('u_texture', scene.targetTexture['targetTex'])
+
+  scene.addObject('image', image)
 
   scene.clear()
-  scene.draw()
+  scene.drawPlane()
 
   // window.requestAnimationFrame(draw)
 }
