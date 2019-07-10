@@ -16,6 +16,8 @@ class GLScene {
     this.objects = {}
     this.cameraPosition = undefined
     this.targetPosition = undefined
+    this.targetTexture = {}
+    this.fb = this.gl.createFramebuffer()
   }
 
   setProgram(name, program) {
@@ -34,6 +36,10 @@ class GLScene {
 
   addObject(name, globject) {
     this.objects[name] = globject
+  }
+
+  removeObject(name) {
+    delete this.objects[name]
   }
 
   setDirectionalLight(x, y, z) {
@@ -110,9 +116,91 @@ class GLScene {
     this.setViewPos()
   }
 
-  bindFrambufferAndSetViewport(fb, width, height) {
-    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, fb)
+  bindFrambufferAndSetViewport(width, height) {
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.fb)
     this.gl.viewport(0, 0, width, height)
+  }
+
+  unbindFrambufferAndSetViewport(width, height) {
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null)
+    this.gl.viewport(0, 0, width, height)
+  }
+
+  addDepthRenderBuffer(width, height) {
+    const depthBuffer = this.gl.createRenderbuffer()
+    this.gl.bindRenderbuffer(this.gl.RENDERBUFFER, depthBuffer)
+
+    // make a depth buffer and the same size as the targetTexture
+    this.gl.renderbufferStorage(
+      this.gl.RENDERBUFFER,
+      this.gl.DEPTH_COMPONENT16,
+      width,
+      height
+    )
+    this.gl.framebufferRenderbuffer(
+      this.gl.FRAMEBUFFER,
+      this.gl.DEPTH_ATTACHMENT,
+      this.gl.RENDERBUFFER,
+      depthBuffer
+    )
+  }
+
+  attachTargetTextureToFrameBuffer(targetName, attachmentPoint) {
+    if (attachmentPoint == 'color') {
+      attachmentPoint = this.gl.COLOR_ATTACHMENT0
+    } else if (attachmentPoint == 'depth') {
+    }
+
+    this.gl.framebufferTexture2D(
+      this.gl.FRAMEBUFFER,
+      attachmentPoint,
+      this.gl.TEXTURE_2D,
+      this.targetTexture[targetName],
+      0
+    )
+  }
+
+  createTargetTexture(name, width, height) {
+    this.targetTexture[name] = this.gl.createTexture()
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.targetTexture[name])
+
+    {
+      // define size and format of level 0
+      const level = 0
+      const internalFormat = this.gl.RGBA
+      const border = 0
+      const format = this.gl.RGBA
+      const type = this.gl.UNSIGNED_BYTE
+      const data = null
+      this.gl.texImage2D(
+        this.gl.TEXTURE_2D,
+        level,
+        internalFormat,
+        width,
+        height,
+        border,
+        format,
+        type,
+        data
+      )
+
+      // set the filtering so we don't need mips
+      this.gl.texParameteri(
+        this.gl.TEXTURE_2D,
+        this.gl.TEXTURE_MIN_FILTER,
+        this.gl.LINEAR
+      )
+      this.gl.texParameteri(
+        this.gl.TEXTURE_2D,
+        this.gl.TEXTURE_WRAP_S,
+        this.gl.CLAMP_TO_EDGE
+      )
+      this.gl.texParameteri(
+        this.gl.TEXTURE_2D,
+        this.gl.TEXTURE_WRAP_T,
+        this.gl.CLAMP_TO_EDGE
+      )
+    }
   }
 
   addUniform1f(name, value) {

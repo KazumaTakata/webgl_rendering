@@ -47,6 +47,10 @@ class GLObject {
     }
   }
 
+  setTextureObject(textureName, texture) {
+    this.texture[textureName] = texture
+  }
+
   setTexture(gl, textureName, textureFileName) {
     let img = window.images[textureFileName]
     let texture = gl.createTexture()

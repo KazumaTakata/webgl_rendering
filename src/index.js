@@ -8,6 +8,9 @@ import { Matrix4 } from './lib/cuon-matrix'
 import { RenderObject } from './util'
 import VSHADER_SOURCE from './glsl/v_phong_shader.glsl'
 import FSHADER_SOURCE from './glsl/f_phong_shader.glsl'
+import VIMAGE_SHADER_SOURCE from 'glsl/v_image_shader.glsl'
+import FIMAGE_SHADER_SOURCE from 'glsl/f_image_shader.glsl'
+import { verticesTexCoords } from 'object/image'
 import { cubeData } from './object/cube'
 import { GLObject } from './object/object'
 import { GLProgram } from './shader/program'
@@ -65,15 +68,54 @@ function start() {
     z: 0
   }
 
-  let aspect = scene.canvas.clientWidth / scene.canvas.clientHeight
-
-  scene.setPerspectiveCamera(cameraPosition, targetPosition, aspect)
   // scene.setViewPos()
+
+  let canvasWidth = scene.canvas.clientWidth
+  let canvasHeight = scene.canvas.clientHeight
+
+  scene.createTargetTexture('targetTex', canvasWidth, canvasHeight)
+  scene.bindFrambufferAndSetViewport(canvasWidth, canvasHeight)
+
+  scene.attachTargetTextureToFrameBuffer('targetTex', 'color')
+  scene.addDepthRenderBuffer(canvasWidth, canvasHeight)
+
+  let aspect = canvasWidth / canvasHeight
+  scene.setPerspectiveCamera(cameraPosition, targetPosition, aspect)
 
   scene.clear()
   scene.draw()
 
-  window.requestAnimationFrame(draw)
+  scene.unbindFrambufferAndSetViewport(canvasWidth, canvasHeight)
+
+  let program2 = createProgram(
+    scene.gl,
+    VIMAGE_SHADER_SOURCE,
+    FIMAGE_SHADER_SOURCE
+  )
+  let glprogram2 = new GLProgram(program2)
+
+  scene.setProgram('image', glprogram2)
+  scene.useProgram('image')
+
+  let image = new GLObject()
+  image.setAll(
+    scene.gl,
+    verticesTexCoords.positions,
+    verticesTexCoords.normals,
+    verticesTexCoords.textureCord,
+    { posSize: 2, texSize: 2 },
+    {}
+  )
+
+  image.setTextureObject('u_texture', scene.targetTexture['targetTex'])
+
+  scene.addObject('image', image)
+  scene.removeObject('floor')
+
+  scene.clear()
+  scene.drawPlane()
+
+  // window.requestAnimationFrame(draw)
 }
 
 function draw(timestamp) {
@@ -82,7 +124,9 @@ function draw(timestamp) {
     y: rho * Math.cos(phi),
     z: Math.sin(phi) * Math.sin(theta) * rho
   }
-  scene.setPerspectiveCamera(cameraPosition, scene.targetPosition, 1)
+
+  let aspect = scene.canvas.clientWidth / scene.canvas.clientHeight
+  scene.setPerspectiveCamera(cameraPosition, scene.targetPosition, aspect)
 
   scene.clear()
   scene.draw()
