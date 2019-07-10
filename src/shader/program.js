@@ -2,6 +2,7 @@ class GLProgram {
   constructor(program) {
     this.program = program
     this.DataByteSize = undefined
+    this.objects = {}
   }
 
   drawElement(gl, DataLength) {

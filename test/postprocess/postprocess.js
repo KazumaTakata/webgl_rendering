@@ -3,21 +3,21 @@ import {
   initShaders,
   createProgram,
   useProgram
-} from './lib/cuon-utils'
-import { Matrix4 } from './lib/cuon-matrix'
-import { RenderObject } from './util'
-import VSHADER_SOURCE from './glsl/v_phong_shader.glsl'
-import FSHADER_SOURCE from './glsl/f_phong_shader.glsl'
-import VIMAGE_SHADER_SOURCE from 'glsl/depth/v_shader.glsl'
-import FIMAGE_SHADER_SOURCE from 'glsl/depth/f_shader.glsl'
+} from 'lib/cuon-utils'
+import { Matrix4 } from 'lib/cuon-matrix'
+import { RenderObject } from 'util'
+import VSHADER_SOURCE from 'glsl/v_phong_shader.glsl'
+import FSHADER_SOURCE from 'glsl/f_phong_shader.glsl'
+import VIMAGE_SHADER_SOURCE from 'glsl/postprocess/v_shader.glsl'
+import FIMAGE_SHADER_SOURCE from 'glsl/postprocess/f_shader.glsl'
 import { verticesTexCoords } from 'object/image'
-import { cubeData } from './object/cube'
-import { GLObject } from './object/object'
-import { GLProgram } from './shader/program'
-import { GLScene } from './scene/scene'
-import { parsedData } from './loader/objLoader'
-import TextureSrc from './loader/sample/texture/sample.png'
-import { InitEnv } from './util/init'
+import { cubeData } from 'object/cube'
+import { GLObject } from 'object/object'
+import { GLProgram } from 'shader/program'
+import { GLScene } from 'scene/scene'
+import { parsedData } from 'loader/objLoader'
+import TextureSrc from 'loader/sample/texture/sample.png'
+import { InitEnv } from 'util/init'
 
 let scene
 
@@ -29,16 +29,12 @@ function main(canvasId) {
     console.log('Failed to retrieve the <canvas> element')
   }
   scene = new GLScene(canvas)
-  var DepthEXT =
-    scene.gl.getExtension('WEBKIT_WEBGL_depth_texture') ||
-    scene.gl.getExtension('MOZ_WEBGL_depth_texture')
-
   start()
 }
 
-let theta = 2.4
-let phi = 0.5
-let rho = 8
+let theta = 2
+let phi = 1.5
+let rho = 20
 
 function start() {
   let program = createProgram(scene.gl, VSHADER_SOURCE, FSHADER_SOURCE)
@@ -62,9 +58,9 @@ function start() {
   scene.setLightPos(-10, 11, -10)
   scene.setLightColor(1.0, 1.0, 1.0)
   let cameraPosition = {
-    x: Math.sin(phi) * Math.cos(theta) * rho,
-    y: rho * Math.cos(phi),
-    z: Math.sin(phi) * Math.sin(theta) * rho
+    x: Math.sin(theta) * 20,
+    y: 20,
+    z: Math.cos(theta) * 20
   }
   let targetPosition = {
     x: 0,
@@ -72,15 +68,16 @@ function start() {
     z: 0
   }
 
+  // scene.setViewPos()
+
   let canvasWidth = scene.canvas.clientWidth
   let canvasHeight = scene.canvas.clientHeight
 
-  scene.createTargetTexture('targetTex', canvasWidth, canvasHeight, 'depth')
+  scene.createTargetTexture('targetTex', canvasWidth, canvasHeight)
 
   scene.bindFrambufferAndSetViewport(canvasWidth, canvasHeight)
-  scene.attachTargetTextureToFrameBuffer('targetTex', 'depth')
-  // scene.addDepthRenderBuffer(canvasWidth, canvasHeight)
-
+  scene.attachTargetTextureToFrameBuffer('targetTex', 'color')
+  scene.addDepthRenderBuffer(canvasWidth, canvasHeight)
   let aspect = canvasWidth / canvasHeight
   scene.setPerspectiveCamera(cameraPosition, targetPosition, aspect)
   scene.clear()
@@ -115,7 +112,7 @@ function start() {
   scene.clear()
   scene.drawPlane()
 
-  // window.requestAnimationFrame(draw)
+  window.requestAnimationFrame(draw)
 }
 
 function draw(timestamp) {
@@ -135,7 +132,7 @@ function draw(timestamp) {
   let canvasWidth = scene.canvas.clientWidth
   let canvasHeight = scene.canvas.clientHeight
   scene.bindFrambufferAndSetViewport(canvasWidth, canvasHeight)
-  scene.attachTargetTextureToFrameBuffer('targetTex', 'depth')
+  scene.attachTargetTextureToFrameBuffer('targetTex', 'color')
   scene.addDepthRenderBuffer(canvasWidth, canvasHeight)
   let aspect = canvasWidth / canvasHeight
   scene.setPerspectiveCamera(cameraPosition, targetPosition, aspect)

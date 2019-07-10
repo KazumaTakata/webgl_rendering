@@ -13,7 +13,7 @@ class GLScene {
     this.gl = getWebGLContext(canvas)
     this.programs = {}
     this.activeProgram = undefined
-    this.objects = {}
+    // this.objects = {}
     this.cameraPosition = undefined
     this.targetPosition = undefined
     this.targetTexture = {}
@@ -34,12 +34,13 @@ class GLScene {
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
   }
 
-  addObject(name, globject) {
-    this.objects[name] = globject
+  addObject(name, object) {
+    this.activeProgram.objects[name] = object
+    // this.objects[name] = object
   }
 
   removeObject(name) {
-    delete this.objects[name]
+    // delete this.objects[name]
   }
 
   setDirectionalLight(x, y, z) {
@@ -74,8 +75,9 @@ class GLScene {
   }
 
   draw() {
-    for (let objectName in this.objects) {
-      let dataLength = this.objects[objectName].position.length / 3
+    for (let objectName in this.activeProgram.objects) {
+      let dataLength =
+        this.activeProgram.objects[objectName].position.length / 3
       this.bindUniform(objectName)
       this.bindAttribute(objectName)
 
@@ -84,7 +86,7 @@ class GLScene {
   }
 
   drawPlane() {
-    for (let objectName in this.objects) {
+    for (let objectName in this.activeProgram.objects) {
       this.bindUniform(objectName)
       this.bindAttribute(objectName)
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
@@ -149,6 +151,7 @@ class GLScene {
     if (attachmentPoint == 'color') {
       attachmentPoint = this.gl.COLOR_ATTACHMENT0
     } else if (attachmentPoint == 'depth') {
+      attachmentPoint = this.gl.DEPTH_ATTACHMENT
     }
 
     this.gl.framebufferTexture2D(
@@ -160,47 +163,53 @@ class GLScene {
     )
   }
 
-  createTargetTexture(name, width, height) {
+  createTargetTexture(name, width, height, kind) {
     this.targetTexture[name] = this.gl.createTexture()
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.targetTexture[name])
 
-    {
-      // define size and format of level 0
-      const level = 0
-      const internalFormat = this.gl.RGBA
-      const border = 0
-      const format = this.gl.RGBA
-      const type = this.gl.UNSIGNED_BYTE
-      const data = null
-      this.gl.texImage2D(
-        this.gl.TEXTURE_2D,
-        level,
-        internalFormat,
-        width,
-        height,
-        border,
-        format,
-        type,
-        data
-      )
-
-      // set the filtering so we don't need mips
-      this.gl.texParameteri(
-        this.gl.TEXTURE_2D,
-        this.gl.TEXTURE_MIN_FILTER,
-        this.gl.LINEAR
-      )
-      this.gl.texParameteri(
-        this.gl.TEXTURE_2D,
-        this.gl.TEXTURE_WRAP_S,
-        this.gl.CLAMP_TO_EDGE
-      )
-      this.gl.texParameteri(
-        this.gl.TEXTURE_2D,
-        this.gl.TEXTURE_WRAP_T,
-        this.gl.CLAMP_TO_EDGE
-      )
+    let level = 0
+    let border = 0
+    let internalFormat
+    let format
+    let data = null
+    let type
+    if (kind == 'color') {
+      internalFormat = this.gl.RGBA
+      format = this.gl.RGBA
+      type = this.gl.UNSIGNED_BYTE
+    } else if (kind == 'depth') {
+      internalFormat = this.gl.DEPTH_COMPONENT
+      format = this.gl.DEPTH_COMPONENT
+      type = this.gl.UNSIGNED_SHORT
     }
+    this.gl.texImage2D(
+      this.gl.TEXTURE_2D,
+      level,
+      internalFormat,
+      width,
+      height,
+      border,
+      format,
+      type,
+      data
+    )
+
+    // set the filtering so we don't need mips
+    this.gl.texParameteri(
+      this.gl.TEXTURE_2D,
+      this.gl.TEXTURE_MIN_FILTER,
+      this.gl.LINEAR
+    )
+    this.gl.texParameteri(
+      this.gl.TEXTURE_2D,
+      this.gl.TEXTURE_WRAP_S,
+      this.gl.CLAMP_TO_EDGE
+    )
+    this.gl.texParameteri(
+      this.gl.TEXTURE_2D,
+      this.gl.TEXTURE_WRAP_T,
+      this.gl.CLAMP_TO_EDGE
+    )
   }
 
   addUniform1f(name, value) {
@@ -211,12 +220,12 @@ class GLScene {
     this.activeProgram.setUniformMatrix4fv(
       this.gl,
       'u_mMatrix',
-      this.objects[objectName].ModelMatrix.elements
+      this.activeProgram.objects[objectName].ModelMatrix.elements
     )
 
     let index = 0
 
-    for (let textureName in this.objects[objectName].texture) {
+    for (let textureName in this.activeProgram.objects[objectName].texture) {
       let diffTextureLocation = this.gl.getUniformLocation(
         this.activeProgram.program,
         textureName
@@ -225,7 +234,7 @@ class GLScene {
       this.gl.activeTexture(this.gl.TEXTURE0 + index)
       this.gl.bindTexture(
         this.gl.TEXTURE_2D,
-        this.objects[objectName].texture[textureName]
+        this.activeProgram.objects[objectName].texture[textureName]
       )
       index++
     }
@@ -234,23 +243,23 @@ class GLScene {
   bindAttribute(name) {
     this.activeProgram.setAttribute(
       this.gl,
-      this.objects[name].positionBuffer,
-      this.objects[name].size.posSize,
+      this.activeProgram.objects[name].positionBuffer,
+      this.activeProgram.objects[name].size.posSize,
       'a_Position'
     )
-    if (this.objects[name].normalBuffer != undefined) {
+    if (this.activeProgram.objects[name].normalBuffer != undefined) {
       this.activeProgram.setAttribute(
         this.gl,
-        this.objects[name].normalBuffer,
-        this.objects[name].size.norSize,
+        this.activeProgram.objects[name].normalBuffer,
+        this.activeProgram.objects[name].size.norSize,
         'a_Normal'
       )
     }
 
     this.activeProgram.setAttribute(
       this.gl,
-      this.objects[name].textureCordBuffer,
-      this.objects[name].size.texSize,
+      this.activeProgram.objects[name].textureCordBuffer,
+      this.activeProgram.objects[name].size.texSize,
       'a_Texcoord'
     )
   }
