@@ -11,7 +11,8 @@ class GLObject {
     this.ModelPosition = { x: 0, y: 0, z: 0 }
     this.ModelRotation = { x: 0, y: 0, z: 0 }
     this.ModelMatrix = new Matrix4()
-    this.diffuseTexture = undefined
+    this.texture = {}
+    this.size = undefined
   }
 
   setPosition(gl, position) {
@@ -25,12 +26,14 @@ class GLObject {
   }
   setNormal(gl, normal) {
     this.normal = normal
-    if (this.normalBuffer == undefined) {
-      this.normalBuffer = gl.createBuffer()
+    if (this.normal != undefined) {
+      if (this.normalBuffer == undefined) {
+        this.normalBuffer = gl.createBuffer()
+      }
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer)
+      gl.bufferData(gl.ARRAY_BUFFER, this.normal, gl.STATIC_DRAW)
+      gl.bindBuffer(gl.ARRAY_BUFFER, null)
     }
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, this.normal, gl.STATIC_DRAW)
-    gl.bindBuffer(gl.ARRAY_BUFFER, null)
   }
   setTextureCord(gl, textureCord) {
     this.textureCord = textureCord
@@ -44,10 +47,10 @@ class GLObject {
     }
   }
 
-  setTexture(gl, textureName) {
-    let img = window.images[textureName]
+  setTexture(gl, textureName, textureFileName) {
+    let img = window.images[textureFileName]
     let texture = gl.createTexture()
-    this.diffuseTexture = texture
+    this.texture[textureName] = texture
 
     gl.bindTexture(gl.TEXTURE_2D, texture)
 
@@ -86,11 +89,15 @@ class GLObject {
 
   setModelMatrix(gl) {}
 
-  setAll(gl, position, normal, textureCord, texture) {
+  setAll(gl, position, normal, textureCord, size, texture) {
     this.setPosition(gl, position)
     this.setNormal(gl, normal)
     this.setTextureCord(gl, textureCord)
-    this.setTexture(gl, texture)
+    for (let textureName in texture) {
+      this.setTexture(gl, textureName, texture[textureName])
+    }
+
+    this.size = size
   }
 }
 

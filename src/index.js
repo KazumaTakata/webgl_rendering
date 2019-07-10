@@ -6,7 +6,8 @@ import {
 } from './lib/cuon-utils'
 import { Matrix4 } from './lib/cuon-matrix'
 import { RenderObject } from './util'
-import { VSHADER_SOURCE, FSHADER_SOURCE } from './shader/simpleShader'
+import VSHADER_SOURCE from './glsl/v_phong_shader.glsl'
+import FSHADER_SOURCE from './glsl/f_phong_shader.glsl'
 import { cubeData } from './object/cube'
 import { GLObject } from './object/object'
 import { GLProgram } from './shader/program'
@@ -45,7 +46,8 @@ function start() {
     parsedData.positions,
     parsedData.normals,
     parsedData.textureCord,
-    TextureSrc
+    { posSize: 3, norSize: 3, texSize: 2 },
+    { u_texture: TextureSrc }
   )
   // floor.setModelPosition(-0.5, -2, -0.5)
   scene.addObject('floor', floor)
@@ -63,7 +65,9 @@ function start() {
     z: 0
   }
 
-  scene.setPerspectiveCamera(cameraPosition, targetPosition)
+  let aspect = scene.canvas.clientWidth / scene.canvas.clientHeight
+
+  scene.setPerspectiveCamera(cameraPosition, targetPosition, aspect)
   // scene.setViewPos()
 
   scene.clear()
@@ -78,7 +82,7 @@ function draw(timestamp) {
     y: rho * Math.cos(phi),
     z: Math.sin(phi) * Math.sin(theta) * rho
   }
-  scene.setPerspectiveCamera(cameraPosition, scene.targetPosition)
+  scene.setPerspectiveCamera(cameraPosition, scene.targetPosition, 1)
 
   scene.clear()
   scene.draw()

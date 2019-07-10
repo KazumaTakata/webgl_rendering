@@ -77,11 +77,19 @@ class GLScene {
     }
   }
 
-  setPerspectiveCamera(cameraPosition, targetPosition) {
+  drawPlane() {
+    for (let objectName in this.objects) {
+      this.bindUniform(objectName)
+      this.bindAttribute(objectName)
+      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
+    }
+  }
+
+  setPerspectiveCamera(cameraPosition, targetPosition, aspect) {
     var vpMatrix = new Matrix4()
     this.cameraPosition = cameraPosition
     this.targetPosition = targetPosition
-    vpMatrix.setPerspective(30, 1, 1, 100)
+    vpMatrix.setPerspective(30, aspect, 1, 100)
     vpMatrix.lookAt(
       cameraPosition.x,
       cameraPosition.y,
@@ -102,6 +110,15 @@ class GLScene {
     this.setViewPos()
   }
 
+  bindFrambufferAndSetViewport(fb, width, height) {
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, fb)
+    this.gl.viewport(0, 0, width, height)
+  }
+
+  addUniform1f(name, value) {
+    this.activeProgram.setUniform1f(this.gl, name, value)
+  }
+
   bindUniform(objectName) {
     this.activeProgram.setUniformMatrix4fv(
       this.gl,
@@ -109,35 +126,43 @@ class GLScene {
       this.objects[objectName].ModelMatrix.elements
     )
 
-    let diffTextureLocation = this.gl.getUniformLocation(
-      this.activeProgram.program,
-      'u_texture'
-    )
-    this.gl.uniform1i(diffTextureLocation, 0)
-    this.gl.activeTexture(this.gl.TEXTURE0)
-    this.gl.bindTexture(
-      this.gl.TEXTURE_2D,
-      this.objects[objectName].diffuseTexture
-    )
+    let index = 0
+
+    for (let textureName in this.objects[objectName].texture) {
+      let diffTextureLocation = this.gl.getUniformLocation(
+        this.activeProgram.program,
+        textureName
+      )
+      this.gl.uniform1i(diffTextureLocation, index)
+      this.gl.activeTexture(this.gl.TEXTURE0 + index)
+      this.gl.bindTexture(
+        this.gl.TEXTURE_2D,
+        this.objects[objectName].texture[textureName]
+      )
+      index++
+    }
   }
 
   bindAttribute(name) {
     this.activeProgram.setAttribute(
       this.gl,
       this.objects[name].positionBuffer,
-      3,
+      this.objects[name].size.posSize,
       'a_Position'
     )
-    this.activeProgram.setAttribute(
-      this.gl,
-      this.objects[name].normalBuffer,
-      3,
-      'a_Normal'
-    )
+    if (this.objects[name].normalBuffer != undefined) {
+      this.activeProgram.setAttribute(
+        this.gl,
+        this.objects[name].normalBuffer,
+        this.objects[name].size.norSize,
+        'a_Normal'
+      )
+    }
+
     this.activeProgram.setAttribute(
       this.gl,
       this.objects[name].textureCordBuffer,
-      2,
+      this.objects[name].size.texSize,
       'a_Texcoord'
     )
   }
