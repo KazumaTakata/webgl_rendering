@@ -77,8 +77,7 @@ class GLScene {
 
   draw() {
     for (let objectName in this.activeProgram.objects) {
-      let dataLength =
-        this.activeProgram.objects[objectName].position.length / 3
+      let dataLength = this.activeProgram.objects[objectName].dataSize
       this.bindUniform(objectName)
       this.bindAttribute(objectName)
 
@@ -244,26 +243,13 @@ class GLScene {
   }
 
   bindAttribute(name) {
-    this.activeProgram.setAttribute(
-      this.gl,
-      this.activeProgram.objects[name].positionBuffer,
-      this.activeProgram.objects[name].size.posSize,
-      'a_Position'
-    )
-    if (this.activeProgram.objects[name].normalBuffer != undefined) {
+    for (let bufferName in this.activeProgram.objects[name].buffer) {
+      let attributeName = 'a_' + bufferName
       this.activeProgram.setAttribute(
         this.gl,
-        this.activeProgram.objects[name].normalBuffer,
-        this.activeProgram.objects[name].size.norSize,
-        'a_Normal'
-      )
-    }
-    if (this.activeProgram.objects[name].textureCordBuffer != undefined) {
-      this.activeProgram.setAttribute(
-        this.gl,
-        this.activeProgram.objects[name].textureCordBuffer,
-        this.activeProgram.objects[name].size.texSize,
-        'a_Texcoord'
+        this.activeProgram.objects[name].buffer[bufferName].buffer,
+        this.activeProgram.objects[name].buffer[bufferName].size,
+        attributeName
       )
     }
   }

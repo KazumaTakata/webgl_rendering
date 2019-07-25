@@ -12,43 +12,31 @@ class GLObject {
     this.ModelRotation = { x: 0, y: 0, z: 0 }
     this.ModelMatrix = new Matrix4()
     this.texture = {}
-    this.size = undefined
-  }
-
-  setPosition(gl, position) {
-    this.position = position
-    if (this.positionBuffer == undefined) {
-      this.positionBuffer = gl.createBuffer()
-    }
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, this.position, gl.STATIC_DRAW)
-    gl.bindBuffer(gl.ARRAY_BUFFER, null)
-  }
-  setNormal(gl, normal) {
-    this.normal = normal
-    if (this.normal != undefined) {
-      if (this.normalBuffer == undefined) {
-        this.normalBuffer = gl.createBuffer()
-      }
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer)
-      gl.bufferData(gl.ARRAY_BUFFER, this.normal, gl.STATIC_DRAW)
-      gl.bindBuffer(gl.ARRAY_BUFFER, null)
-    }
-  }
-  setTextureCord(gl, textureCord) {
-    this.textureCord = textureCord
-    if (this.textureCord != undefined) {
-      if (this.textureCordBuffer == undefined) {
-        this.textureCordBuffer = gl.createBuffer()
-      }
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.textureCordBuffer)
-      gl.bufferData(gl.ARRAY_BUFFER, this.textureCord, gl.STATIC_DRAW)
-      gl.bindBuffer(gl.ARRAY_BUFFER, null)
-    }
+    this.size = {}
+    this.dataSize = undefined
+    this.buffer = {}
   }
 
   setTextureObject(textureName, texture) {
     this.texture[textureName] = texture
+  }
+  setAttribute(gl, attributeName, attributeData) {
+    this.buffer[attributeName] = {}
+    this.buffer[attributeName].buffer = gl.createBuffer()
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer[attributeName].buffer)
+    gl.bufferData(gl.ARRAY_BUFFER, attributeData.data, gl.STATIC_DRAW)
+    gl.bindBuffer(gl.ARRAY_BUFFER, null)
+
+    this.buffer[attributeName].size = attributeData.size
+
+    if (this.dataSize == undefined) {
+      this.dataSize = attributeData.data.length / attributeData.size
+    } else {
+      if (this.dataSize != attributeData.data.length / attributeData.size) {
+        console.warn('attribute data is not aligned!')
+      }
+    }
   }
 
   setTexture(gl, textureName, textureFileName) {
@@ -93,15 +81,25 @@ class GLObject {
 
   setModelMatrix(gl) {}
 
-  setAll(gl, position, normal, textureCord, size, texture) {
-    this.setPosition(gl, position)
-    this.setNormal(gl, normal)
-    this.setTextureCord(gl, textureCord)
-    for (let textureName in texture) {
-      this.setTexture(gl, textureName, texture[textureName])
+  // setAll(gl, position, normal, textureCord, size, texture) {
+  //   this.setPosition(gl, position)
+  //   this.setNormal(gl, normal)
+  //   this.setTextureCord(gl, textureCord)
+  //   for (let textureName in texture) {
+  //     this.setTexture(gl, textureName, texture[textureName])
+  //   }
+
+  //   this.size = size
+  // }
+
+  setAttributeTexture(gl, attributes, textures) {
+    for (let attributeName in attributes) {
+      this.setAttribute(gl, attributeName, attributes[attributeName])
     }
 
-    this.size = size
+    for (let textureName in textures) {
+      this.setTexture(gl, textureName, textures[textureName])
+    }
   }
 }
 
