@@ -258,13 +258,14 @@ class GLScene {
         'a_Normal'
       )
     }
-
-    this.activeProgram.setAttribute(
-      this.gl,
-      this.activeProgram.objects[name].textureCordBuffer,
-      this.activeProgram.objects[name].size.texSize,
-      'a_Texcoord'
-    )
+    if (this.activeProgram.objects[name].textureCordBuffer != undefined) {
+      this.activeProgram.setAttribute(
+        this.gl,
+        this.activeProgram.objects[name].textureCordBuffer,
+        this.activeProgram.objects[name].size.texSize,
+        'a_Texcoord'
+      )
+    }
   }
 }
 

@@ -8,8 +8,10 @@ import { Matrix4 } from 'lib/cuon-matrix'
 import { RenderObject } from 'util'
 import VSHADER_SOURCE from 'glsl/phong/v_phong_shader.glsl'
 import FSHADER_SOURCE from 'glsl/phong/f_phong_shader.glsl'
-import VIMAGE_SHADER_SOURCE from 'glsl/postprocess/v_shader.glsl'
-import FIMAGE_SHADER_SOURCE from 'glsl/postprocess/f_shader.glsl'
+
+import VSSHADER_SOURCE from 'glsl/phong_shadow/v_shader.glsl'
+import FSSHADER_SOURCE from 'glsl/phong_shadow/f_shader.glsl'
+
 import { verticesTexCoords } from 'object/image'
 import { cubeData } from 'object/cube'
 import { GLObject } from 'object/object'
@@ -29,12 +31,16 @@ function main(canvasId) {
     console.log('Failed to retrieve the <canvas> element')
   }
   scene = new GLScene(canvas)
+  var DepthEXT =
+    scene.gl.getExtension('WEBKIT_WEBGL_depth_texture') ||
+    scene.gl.getExtension('MOZ_WEBGL_depth_texture')
+
   start()
 }
 
-let theta = 2
-let phi = 1.5
-let rho = 20
+let theta = 6.4
+let phi = 0.5
+let rho = 14
 
 function start() {
   let program = createProgram(scene.gl, VSHADER_SOURCE, FSHADER_SOURCE)
@@ -42,6 +48,23 @@ function start() {
   scene.setProgram('simple', glprogram)
   scene.useProgram('simple')
   scene.defaultSetting()
+
+  let lightPosition = {
+    x: -10,
+    y: 11,
+    z: -10
+  }
+
+  let cameraPosition = {
+    x: Math.sin(phi) * Math.cos(theta) * rho,
+    y: rho * Math.cos(phi),
+    z: Math.sin(phi) * Math.sin(theta) * rho
+  }
+  let targetPosition = {
+    x: 0,
+    y: 0,
+    z: 0
+  }
 
   let floor = new GLObject()
   floor.setAll(
@@ -55,62 +78,22 @@ function start() {
   // floor.setModelPosition(-0.5, -2, -0.5)
   scene.addObject('floor', floor)
 
-  scene.setLightPos(-10, 11, -10)
+  scene.setLightPos(lightPosition.x, lightPosition.y, lightPosition.z)
   scene.setLightColor(1.0, 1.0, 1.0)
-  let cameraPosition = {
-    x: Math.sin(theta) * 20,
-    y: 20,
-    z: Math.cos(theta) * 20
-  }
-  let targetPosition = {
-    x: 0,
-    y: 0,
-    z: 0
-  }
-
-  // scene.setViewPos()
 
   let canvasWidth = scene.canvas.clientWidth
   let canvasHeight = scene.canvas.clientHeight
 
-  scene.createTargetTexture('targetTex', canvasWidth, canvasHeight)
+  // scene.createTargetTexture('targetTex', canvasWidth, canvasHeight, 'depth')
 
-  scene.bindFrambufferAndSetViewport(canvasWidth, canvasHeight)
-  scene.attachTargetTextureToFrameBuffer('targetTex', 'color')
-  scene.addDepthRenderBuffer(canvasWidth, canvasHeight)
+  // scene.bindFrambufferAndSetViewport(canvasWidth, canvasHeight)
+  // scene.attachTargetTextureToFrameBuffer('targetTex', 'depth')
+
   let aspect = canvasWidth / canvasHeight
-  scene.setPerspectiveCamera(cameraPosition, targetPosition, aspect)
+  scene.aspect = aspect
+  scene.setPerspectiveCamera(lightPosition, targetPosition, aspect)
   scene.clear()
   scene.draw()
-
-  scene.unbindFrambufferAndSetViewport(canvasWidth, canvasHeight)
-
-  let program2 = createProgram(
-    scene.gl,
-    VIMAGE_SHADER_SOURCE,
-    FIMAGE_SHADER_SOURCE
-  )
-  let glprogram2 = new GLProgram(program2)
-
-  scene.setProgram('image', glprogram2)
-  scene.useProgram('image')
-
-  let image = new GLObject()
-  image.setAll(
-    scene.gl,
-    verticesTexCoords.positions,
-    verticesTexCoords.normals,
-    verticesTexCoords.textureCord,
-    { posSize: 2, texSize: 2 },
-    {}
-  )
-
-  image.setTextureObject('u_texture', scene.targetTexture['targetTex'])
-
-  scene.addObject('image', image)
-
-  scene.clear()
-  scene.drawPlane()
 
   window.requestAnimationFrame(draw)
 }
@@ -128,26 +111,10 @@ function draw(timestamp) {
     z: 0
   }
 
-  scene.useProgram('simple')
-  let canvasWidth = scene.canvas.clientWidth
-  let canvasHeight = scene.canvas.clientHeight
-  scene.bindFrambufferAndSetViewport(canvasWidth, canvasHeight)
-  scene.attachTargetTextureToFrameBuffer('targetTex', 'color')
-  scene.addDepthRenderBuffer(canvasWidth, canvasHeight)
-  let aspect = canvasWidth / canvasHeight
-  scene.setPerspectiveCamera(cameraPosition, targetPosition, aspect)
+  scene.setPerspectiveCamera(cameraPosition, targetPosition, scene.aspect)
   scene.clear()
   scene.draw()
-  scene.unbindFrambufferAndSetViewport(canvasWidth, canvasHeight)
 
-  scene.useProgram('image')
-  scene.activeProgram.objects['image'].setTextureObject(
-    'u_texture',
-    scene.targetTexture['targetTex']
-  )
-
-  scene.clear()
-  scene.drawPlane()
   window.requestAnimationFrame(draw)
 }
 
