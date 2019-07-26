@@ -9,6 +9,9 @@ import { RenderObject } from 'util'
 import VSHADER_SOURCE from 'glsl/phong/v_phong_normal.glsl'
 import FSHADER_SOURCE from 'glsl/phong/f_phong_normal.glsl'
 
+import FIMAGE_SHADER_SOURCE from 'glsl/postprocess/f_hdr.glsl'
+import VIMAGE_SHADER_SOURCE from 'glsl/postprocess/v_simple.glsl'
+
 import { verticesTexCoords } from 'object/image'
 import { cubeData } from 'object/cube'
 import { planeData, planeDataXZ } from 'object/plane'
@@ -35,11 +38,13 @@ function main(canvasId) {
     scene.gl.getExtension('WEBKIT_WEBGL_depth_texture') ||
     scene.gl.getExtension('MOZ_WEBGL_depth_texture')
 
+  let FloatTex = scene.gl.getExtension('OES_texture_float')
+
   start()
 }
 
 let theta = 1.4
-let phi = 1.5
+let phi = 0.5
 let rho = 5
 
 function start() {
@@ -84,18 +89,63 @@ function start() {
   scene.addObject('floor', floor)
 
   scene.setLightPos(lightPosition.x, lightPosition.y, lightPosition.z)
-  scene.setLightColor(1.0, 1.0, 1.0)
+  scene.setLightColor(10.0, 10.0, 10.0)
 
   let canvasWidth = scene.canvas.clientWidth
   let canvasHeight = scene.canvas.clientHeight
 
   let aspect = canvasWidth / canvasHeight
   scene.aspect = aspect
-  scene.setPerspectiveCamera(lightPosition, targetPosition, aspect)
+  scene.setPerspectiveCamera(cameraPosition, targetPosition, aspect)
+
+  scene.createTargetTexture(
+    'targetTex',
+    canvasWidth,
+    canvasHeight,
+    'floatColor'
+  )
+
+  scene.bindFrambufferAndSetViewport(canvasWidth, canvasHeight)
+  scene.attachTargetTextureToFrameBuffer('targetTex', 'floatColor')
+
   scene.clear()
   scene.draw()
 
-  window.requestAnimationFrame(draw)
+  renderImage()
+
+  // window.requestAnimationFrame(draw)
+}
+
+function renderImage() {
+  let canvasWidth = scene.canvas.clientWidth
+  let canvasHeight = scene.canvas.clientHeight
+  scene.unbindFrambufferAndSetViewport(canvasWidth, canvasHeight)
+
+  let program = createProgram(
+    scene.gl,
+    VIMAGE_SHADER_SOURCE,
+    FIMAGE_SHADER_SOURCE
+  )
+  let glprogram = new GLProgram(program)
+
+  scene.setProgram('image', glprogram)
+  scene.useProgram('image')
+
+  let image = new GLObject()
+
+  let attributeData = {
+    Position: { data: verticesTexCoords.positions, size: 2 },
+    Texcoord: { data: verticesTexCoords.textureCord, size: 2 }
+  }
+
+  image.setAttributeTexture(scene.gl, attributeData, {})
+
+  image.setTextureObject('u_texture', scene.targetTexture['targetTex'])
+
+  scene.addObject('image', image)
+
+  scene.clear()
+  scene.drawPlane()
 }
 
 function draw(timestamp) {

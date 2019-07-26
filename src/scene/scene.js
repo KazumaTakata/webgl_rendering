@@ -150,7 +150,7 @@ class GLScene {
   }
 
   attachTargetTextureToFrameBuffer(targetName, attachmentPoint) {
-    if (attachmentPoint == 'color') {
+    if (attachmentPoint == 'color' || attachmentPoint == 'floatColor') {
       attachmentPoint = this.gl.COLOR_ATTACHMENT0
     } else if (attachmentPoint == 'depth') {
       attachmentPoint = this.gl.DEPTH_ATTACHMENT
@@ -179,10 +179,16 @@ class GLScene {
       internalFormat = this.gl.RGBA
       format = this.gl.RGBA
       type = this.gl.UNSIGNED_BYTE
+    } else if (kind == 'floatColor') {
+      internalFormat = this.gl.RGBA
+      format = this.gl.RGBA
+      type = this.gl.FLOAT
     } else if (kind == 'depth') {
       internalFormat = this.gl.DEPTH_COMPONENT
       format = this.gl.DEPTH_COMPONENT
       type = this.gl.UNSIGNED_SHORT
+    } else {
+      console.warn('kind parameter is not correct!!')
     }
     this.gl.texImage2D(
       this.gl.TEXTURE_2D,
@@ -196,11 +202,15 @@ class GLScene {
       data
     )
 
-    // set the filtering so we don't need mips
     this.gl.texParameteri(
       this.gl.TEXTURE_2D,
       this.gl.TEXTURE_MIN_FILTER,
-      this.gl.LINEAR
+      this.gl.NEAREST
+    )
+    this.gl.texParameteri(
+      this.gl.TEXTURE_2D,
+      this.gl.TEXTURE_MAG_FILTER,
+      this.gl.NEAREST
     )
     this.gl.texParameteri(
       this.gl.TEXTURE_2D,
