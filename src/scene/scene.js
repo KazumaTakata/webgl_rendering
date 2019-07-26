@@ -165,6 +165,16 @@ class GLScene {
     )
   }
 
+  attachTargetTextureToFrameBufferAttachment(targetName, attachmentPoint) {
+    this.gl.framebufferTexture2D(
+      this.gl.FRAMEBUFFER,
+      attachmentPoint,
+      this.gl.TEXTURE_2D,
+      this.targetTexture[targetName],
+      0
+    )
+  }
+
   createTargetTexture(name, width, height, kind) {
     this.targetTexture[name] = this.gl.createTexture()
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.targetTexture[name])

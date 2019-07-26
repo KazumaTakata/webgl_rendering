@@ -6,11 +6,11 @@ import {
 } from 'lib/cuon-utils'
 import { Matrix4 } from 'lib/cuon-matrix'
 import { RenderObject } from 'util'
-import VSHADER_SOURCE from 'glsl/phong/v_deferred.glsl'
-import FSHADER_SOURCE from 'glsl/phong/f_deferred.glsl'
+import VSHADER_SOURCE from 'glsl/phong/v_phong_normal.glsl'
+import FSHADER_SOURCE from 'glsl/phong/f_phong_normal.glsl'
 
-import FIMAGE_SHADER_SOURCE from 'glsl/postprocess/f_deferred.glsl'
-import VIMAGE_SHADER_SOURCE from 'glsl/postprocess/v_deferred.glsl'
+import FIMAGE_SHADER_SOURCE from 'glsl/postprocess/f_hdr.glsl'
+import VIMAGE_SHADER_SOURCE from 'glsl/postprocess/v_simple.glsl'
 
 import { verticesTexCoords } from 'object/image'
 import { cubeData } from 'object/cube'
@@ -39,10 +39,6 @@ function main(canvasId) {
     scene.gl.getExtension('MOZ_WEBGL_depth_texture')
 
   let FloatTex = scene.gl.getExtension('OES_texture_float')
-
-  let ext = scene.gl.getExtension('WEBGL_draw_buffers')
-
-  scene.mrt = ext
 
   start()
 }
@@ -78,18 +74,9 @@ function start() {
   let TB = calcTangentData(planeDataXZ)
 
   let attributeData = {
-    Position: {
-      data: planeDataXZ.positions,
-      size: 3
-    },
-    Normal: {
-      data: planeDataXZ.normals,
-      size: 3
-    },
-    Texcoord: {
-      data: planeDataXZ.textureCord,
-      size: 2
-    },
+    Position: { data: planeDataXZ.positions, size: 3 },
+    Normal: { data: planeDataXZ.normals, size: 3 },
+    Texcoord: { data: planeDataXZ.textureCord, size: 2 },
     Tangent: { data: TB.T, size: 3 },
     Bitangent: { data: TB.B, size: 3 }
   }
@@ -102,7 +89,7 @@ function start() {
   scene.addObject('floor', floor)
 
   scene.setLightPos(lightPosition.x, lightPosition.y, lightPosition.z)
-  scene.setLightColor(1.0, 1.0, 1.0)
+  scene.setLightColor(10.0, 10.0, 10.0)
 
   let canvasWidth = scene.canvas.clientWidth
   let canvasHeight = scene.canvas.clientHeight
@@ -111,51 +98,15 @@ function start() {
   scene.aspect = aspect
   scene.setPerspectiveCamera(cameraPosition, targetPosition, aspect)
 
+  scene.createTargetTexture(
+    'targetTex',
+    canvasWidth,
+    canvasHeight,
+    'floatColor'
+  )
+
   scene.bindFrambufferAndSetViewport(canvasWidth, canvasHeight)
-
-  scene.createTargetTexture(
-    'positionTex',
-    canvasWidth,
-    canvasHeight,
-    'floatColor'
-  )
-
-  // scene.attachTargetTextureToFrameBuffer('targetTex', 'floatColor')
-  scene.attachTargetTextureToFrameBufferAttachment(
-    'positionTex',
-    scene.mrt.COLOR_ATTACHMENT0_WEBGL
-  )
-
-  scene.createTargetTexture(
-    'normalTex',
-    canvasWidth,
-    canvasHeight,
-    'floatColor'
-  )
-
-  scene.attachTargetTextureToFrameBufferAttachment(
-    'normalTex',
-    scene.mrt.COLOR_ATTACHMENT1_WEBGL
-  )
-
-  scene.createTargetTexture(
-    'albedoTex',
-    canvasWidth,
-    canvasHeight,
-    'floatColor'
-  )
-
-  scene.attachTargetTextureToFrameBufferAttachment(
-    'albedoTex',
-    scene.mrt.COLOR_ATTACHMENT2_WEBGL
-  )
-
-  scene.mrt.drawBuffersWEBGL([
-    scene.mrt.COLOR_ATTACHMENT0_WEBGL, // gl_FragData[0]
-    scene.mrt.COLOR_ATTACHMENT1_WEBGL, // gl_FragData[1]
-    scene.mrt.COLOR_ATTACHMENT2_WEBGL, // gl_FragData[2]
-    scene.mrt.COLOR_ATTACHMENT3_WEBGL // gl_FragData[3]
-  ])
+  scene.attachTargetTextureToFrameBuffer('targetTex', 'floatColor')
 
   scene.clear()
   scene.draw()
@@ -180,27 +131,6 @@ function renderImage() {
   scene.setProgram('image', glprogram)
   scene.useProgram('image')
 
-  let lightPosition = {
-    x: 0,
-    y: 10,
-    z: 0
-  }
-
-  let cameraPosition = {
-    x: Math.sin(phi) * Math.cos(theta) * rho,
-    y: rho * Math.cos(phi),
-    z: Math.sin(phi) * Math.sin(theta) * rho
-  }
-  let targetPosition = {
-    x: 0,
-    y: 0,
-    z: 0
-  }
-
-  scene.setLightPos(lightPosition.x, lightPosition.y, lightPosition.z)
-  scene.setLightColor(1.0, 1.0, 1.0)
-  scene.setPerspectiveCamera(cameraPosition, targetPosition, scene.aspect)
-
   let image = new GLObject()
 
   let attributeData = {
@@ -210,9 +140,7 @@ function renderImage() {
 
   image.setAttributeTexture(scene.gl, attributeData, {})
 
-  image.setTextureObject('u_position', scene.targetTexture['positionTex'])
-  image.setTextureObject('u_normal', scene.targetTexture['normalTex'])
-  image.setTextureObject('u_albedo', scene.targetTexture['albedoTex'])
+  image.setTextureObject('u_texture', scene.targetTexture['targetTex'])
 
   scene.addObject('image', image)
 
