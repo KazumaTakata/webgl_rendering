@@ -39,6 +39,46 @@ class GLObject {
     }
   }
 
+  setTextureDataWidthHeight(gl, textureName, kind, width, height, data) {
+    let texture = gl.createTexture()
+    this.texture[textureName] = texture
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+
+    let level = 0
+    let border = 0
+    let internalFormat
+    let format
+
+    let type
+    if (kind == 'RGBA') {
+      internalFormat = gl.RGBA
+      format = gl.RGBA
+      type = gl.UNSIGNED_BYTE
+    } else if (kind == 'FloatRGBA') {
+      internalFormat = gl.RGBA
+      format = gl.RGBA
+      type = gl.FLOAT
+    } else {
+      console.warn('kind parameter is not correct!!')
+    }
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      level,
+      internalFormat,
+      width,
+      height,
+      border,
+      format,
+      type,
+      data
+    )
+
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+  }
+
   setTexture(gl, textureName, textureFileName) {
     let img = window.images[textureFileName]
     let texture = gl.createTexture()
@@ -80,17 +120,6 @@ class GLObject {
   }
 
   setModelMatrix(gl) {}
-
-  // setAll(gl, position, normal, textureCord, size, texture) {
-  //   this.setPosition(gl, position)
-  //   this.setNormal(gl, normal)
-  //   this.setTextureCord(gl, textureCord)
-  //   for (let textureName in texture) {
-  //     this.setTexture(gl, textureName, texture[textureName])
-  //   }
-
-  //   this.size = size
-  // }
 
   setAttributeTexture(gl, attributes, textures) {
     for (let attributeName in attributes) {
